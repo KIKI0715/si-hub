@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>스마트 인터랙션 디자인 · 제출 허브</title>
+<!-- 공개 보기: 별칭과 제출 링크만 보입니다. 이 저장소에는 실명·학번·성적이 없습니다.
+     교수자 모드: 접속 코드를 넣으면 비공개 저장소(config.js 의 endpoint)에서 실명·학번·판단 내용을 읽고 씁니다.
+     수강생·링크: students.js / 판단 기준: rubric.js / 링크 점검 결과: link-status.js (check_links.py 가 씀) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  /* 색·모양은 토스 디자인 시스템(TDS)의 공개된 색 단계와 컴포넌트 모양을 참고했습니다. 토스의 이름·로고·전용 글꼴은 쓰지 않습니다. */
+  :root{ --bg:#f2f4f6; --card:#fff; --ink:#191f28; --ink2:#4e5968; --muted:#8b95a1; --line:#e5e8eb; --soft:#f2f4f6; --soft2:#f9fafb;
+    --accent:#3182f6; --accent-press:#2272eb; --accent-weak:#e8f3ff; --on-accent:#fff;
+    --ok:#03b26c; --ok-weak:#e3f7ee; --warn:#dd7d02; --warn-weak:#fff3e0; --bad:#f04452; --bad-weak:#ffecee; }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#17171c; --card:#202027; --ink:#e4e4e5; --ink2:#c3c3c6; --muted:#9e9ea4; --line:#2c2c35; --soft:#2c2c35; --soft2:#26262e;
+    --accent:#4593fc; --accent-press:#3182f6; --accent-weak:#1f2d44; --on-accent:#fff;
+    --ok:#15c47e; --ok-weak:#17352a; --warn:#ffa927; --warn-weak:#3a2c14; --bad:#f66570; --bad-weak:#3c1f22; } }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;letter-spacing:-.01em;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+  button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+  button{cursor:pointer}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 20px;background:var(--card)}
+  header h1{font-size:19px;margin:0 6px 0 0;font-weight:700}
+  .seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;gap:2px}
+  .seg button{border:0;background:transparent;padding:6px 14px;border-radius:8px;font-weight:600;font-size:14px;color:var(--ink2)}
+  .seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .meta{color:var(--muted);font-size:13px}
+  .spacer{flex:1}
+  .btn{border:0;background:var(--soft);color:var(--ink2);border-radius:10px;padding:8px 14px;font-weight:600;font-size:14px;transition:background .12s}
+  a.btn{text-decoration:none;display:inline-block}
+  .btn:hover{background:var(--line)}
+  .btn.primary{background:var(--accent);color:var(--on-accent)}
+  .btn.primary:hover{background:var(--accent-press)}
+  .btn.weak{background:var(--accent-weak);color:var(--accent)}
+  #sync{font-size:13px;color:var(--muted);border:0;background:transparent;padding:0}
+  #sync.bad{color:var(--bad);font-weight:600}
+  body:not(.prof) .prof-only{display:none !important}
+  main{display:grid;grid-template-columns:220px minmax(0,1fr);gap:12px;padding:12px;min-height:0}
+  body.prof main{grid-template-columns:240px minmax(0,1fr) 410px}
+  nav,.view,aside{background:var(--card);border-radius:20px;min-height:0}
+  nav{overflow:auto;padding:8px}
+  nav button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:12px 14px;border-radius:12px}
+  nav button:hover{background:var(--soft2)}
+  nav button[aria-current="true"]{background:var(--accent-weak)}
+  nav button[aria-current="true"] .nm{color:var(--accent)}
+  nav .nm{font-weight:600;font-size:15px}
+  nav .sm{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+  .view{display:grid;grid-template-rows:auto auto 1fr;min-width:0;overflow:hidden}
+  .vbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:16px 20px 10px}
+  .vbar h2{font-size:22px;margin:0 6px 0 0;font-weight:700}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;padding:0 20px 14px;align-items:center}
+  .tab{border:0;background:var(--soft);color:var(--ink2);border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600}
+  .tab[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+  .chip{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:3px 8px}
+  .chip.embed{color:var(--ok);background:var(--ok-weak)} .chip.link{color:var(--warn);background:var(--warn-weak)}
+  .chip.closed{color:var(--bad);background:var(--bad-weak)} .chip.unknown{color:var(--muted);background:var(--soft)}
+  .nums{display:flex;flex-wrap:wrap;gap:4px}
+  .nums button{min-width:36px;height:30px;border:0;background:var(--soft);color:var(--ink2);border-radius:8px;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;padding:0 8px}
+  .nums button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+  .stage{position:relative;overflow:hidden;background:var(--soft);min-height:0}
+  .stage iframe{position:absolute;left:50%;top:0;border:0;background:#fff;transform-origin:top left}
+  .stage .msg{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:10px;padding:24px;color:var(--muted)}
+  .stage .msg b{color:var(--ink);font-size:19px;font-weight:700}
+  aside{overflow:auto;padding:20px 20px 40px}
+  aside h3{font-size:19px;margin:0 0 2px;font-weight:700}
+  aside .src{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+  .note{font-size:13px;color:var(--ink2);background:var(--soft2);border-radius:12px;padding:10px 12px;margin:8px 0}
+  details.lv{background:var(--soft2);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:13px}
+  details.lv summary{cursor:pointer;font-weight:600;color:var(--ink2)}
+  details.lv dl{margin:8px 0 2px;display:grid;grid-template-columns:3em 1fr;gap:6px 8px}
+  details.lv dt{font-weight:700} details.lv dd{margin:0;color:var(--ink2)}
+  .item{border-top:1px solid var(--line);padding:18px 0 16px}
+  .item .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .item .hd b{font-size:17px;font-weight:700}
+  .item .hd .meta{font-weight:600;color:var(--accent)}
+  .item .look{font-size:13px;color:var(--muted);margin:2px 0 10px}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:14px;color:var(--ink2);padding:5px 0}
+  .row .req{color:var(--muted);font-size:12px;white-space:nowrap}
+  .row input[type=number]{width:60px;text-align:right;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+  .row input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+  .row b{color:var(--ink);font-size:15px}
+  input[type=number]:focus,textarea:focus,dialog input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak)}
+  .levels{display:flex;gap:6px;margin:12px 0 10px}
+  .levels label{flex:1;text-align:center;background:var(--soft);color:var(--ink2);border-radius:10px;padding:8px 0;font-size:14px;font-weight:600;cursor:pointer}
+  .levels input{position:absolute;opacity:0;pointer-events:none}
+  .levels label:has(input:checked){background:var(--accent);color:var(--on-accent)}
+  .levels label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+  .score{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--ink2)}
+  .score input{width:76px;text-align:right;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-weight:700;font-size:17px;color:var(--ink)}
+  textarea{width:100%;min-height:60px;margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);resize:vertical;font-size:14px}
+  textarea::placeholder{color:var(--muted)}
+  .total{position:sticky;bottom:-40px;background:var(--card);border-top:1px solid var(--line);padding:14px 0 16px;margin-top:8px;display:flex;justify-content:space-between;align-items:baseline;font-weight:600}
+  .total b{font-size:28px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  .grid46{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin:10px 0 4px}
+  .grid46 button{height:34px;border:0;border-radius:8px;background:var(--soft);color:var(--ink2);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;padding:0}
+  .grid46 button[data-v="ok"]{background:var(--ok);color:#fff}
+  .grid46 button[data-v="bad"]{background:var(--bad);color:#fff}
+  .legend{font-size:12.5px;color:var(--muted);margin:4px 0 0}
+  dialog{border:0;border-radius:20px;background:var(--card);color:var(--ink);padding:24px;width:min(380px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.2)}
+  dialog::backdrop{background:rgba(0,0,0,.4)}
+  dialog h3{margin:0 0 6px;font-size:20px;font-weight:700}
+  dialog p{margin:0 0 14px;font-size:14px;color:var(--ink2)}
+  dialog input[type=password]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:16px}
+  dialog .rm{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink2);margin:12px 0 4px}
+  dialog .rm input{width:18px;height:18px;accent-color:var(--accent)}
+  dialog .err{color:var(--bad);min-height:1.3em;font-size:13px;margin:6px 0 8px}
+  dialog .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  dialog .acts .btn{padding:12px;font-size:15px;border-radius:12px}
+  @media (max-width:1100px){
+    .app{height:auto} html,body{height:auto}
+    main, body.prof main{grid-template-columns:1fr}
+    nav{display:flex;overflow-x:auto}
+    nav button{width:auto;white-space:nowrap}
+    .stage{height:70vh}
+    .total{bottom:0}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>스마트 인터랙션 디자인 · 제출 허브</h1>
+    <div class="seg" id="taskSeg" role="group" aria-label="과제 고르기"></div>
+    <span class="meta" id="meta"></span>
+    <span class="spacer"></span>
+    <button id="sync" class="prof-only" title="저장 상태"></button>
+    <button class="btn" id="prev">← 이전</button>
+    <button class="btn" id="next">다음 →</button>
+    <button class="btn primary prof-only" id="exportCsv">판단 내용 내려받기 (CSV)</button>
+    <button class="btn" id="mode">교수자 모드</button>
+  </header>
+  <main>
+    <nav id="list" aria-label="수강생"></nav>
+    <section class="view">
+      <div class="vbar" id="vbar"></div>
+      <div class="tabs" id="tabs"></div>
+      <div class="stage" id="stage"></div>
+    </section>
+    <aside id="panel" class="prof-only"></aside>
+  </main>
+</div>
+<dialog id="dlg">
+  <form id="dlgForm">
+    <h3>교수자 모드</h3>
+    <p>접속 코드를 넣으면 실명·학번과 판단 기준 칸이 보입니다. 적은 내용은 비공개 저장소에 저장됩니다.</p>
+    <input type="password" id="code" autocomplete="off" placeholder="접속 코드" aria-label="접속 코드">
+    <label class="rm"><input type="checkbox" id="remember"> 이 기기에서 기억하기</label>
+    <p class="err" id="dlgErr" role="alert"></p>
+    <div class="acts"><button type="button" class="btn" id="dlgCancel">취소</button><button type="submit" class="btn primary" id="dlgOk">들어가기</button></div>
+  </form>
+</dialog>
+<script src="config.js"></script>
+<script src="students.js"></script>
+<script src="rubric.js"></script>
+<script src="link-status.js"></script>
+<script>
+(() => {
+  const CFG = window.HUB_CONFIG || {}, REMOTE = !!CFG.endpoint;
+  const S = window.STUDENTS || [], R = window.RUBRIC || {}, LS = window.LINK_STATUS || { links: {} };
+  const TASKS = [["w10", "10주차 과제"], ["final", "기말과제"]];
+  const KEY_LOCAL = "si-hub-v2-judgement", KEY_CODE = "si-hub-v2-code";
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pad = n => String(n).padStart(2, "0");
+  const STATUS = { embed: "화면 표시", link: "새 탭으로만 열림", closed: "열리지 않음", unknown: "점검 전" };
+
+  /* ── 상태 ── */
+  let prof = false, code = "", roster = {}, store = {};
+  const st = { task: "w10", sid: S[0] && S[0].id, link: 0, num: null, width: "fit" };
+  // 교수자 모드에서는 명단에만 있고 아직 링크를 안 낸 학생도 목록에 보입니다.
+  const all = () => prof ? [...S, ...Object.keys(roster).filter(id => !S.some(s => s.id === id)).sort().map(id => ({ id, links: [] }))] : S;
+  const student = () => all().find(s => s.id === st.sid);
+  const who = s => prof && roster[s.id] ? `${roster[s.id].name} · ${roster[s.id].no}` : (s.label || s.id);
+  const links = (s, task) => ((s && s.links) || []).filter(l => l.task === task);
+  const statusOf = url => (LS.links[url] && LS.links[url].status) || "unknown";
+  const numList = l => l.numbered === true ? Array.from({ length: 46 }, (_, i) => i + 1) : Array.isArray(l.numbered) ? l.numbered : null;
+  const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+  const rec = (sid, task) => { store[sid] = store[sid] || {}; return store[sid][task] = store[sid][task] || {}; };
+
+  /* ── 비공개 저장소 (config.js 의 endpoint). 없으면 이 브라우저에만 저장합니다 ── */
+  async function api(body) {
+    const res = await fetch(CFG.endpoint, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ key: code, ...body }) });
+    if (!res.ok) throw new Error("연결 실패 (HTTP " + res.status + ")");
+    const j = await res.json(); if (!j.ok) throw new Error(j.error || "요청 실패"); return j;
+  }
+  const dirty = new Set(); let timer = null;
+  const setSync = (text, bad) => { $("sync").textContent = text; $("sync").classList.toggle("bad", !!bad); };
+  function save(sid, task) {
+    if (!REMOTE) { try { localStorage.setItem(KEY_LOCAL, JSON.stringify(store)); } catch (e) {} setSync("이 브라우저에만 저장됨"); return; }
+    dirty.add(sid + "|" + task); setSync("저장 대기…"); clearTimeout(timer); timer = setTimeout(flush, 900);
+  }
+  async function flush() {
+    clearTimeout(timer); if (!dirty.size) return;
+    const jobs = [...dirty]; dirty.clear(); setSync("저장 중…");
+    for (const j of jobs) { const [sid, task] = j.split("|");
+      try { await api({ action: "save", sid, task, data: (store[sid] || {})[task] || {} }); } catch (e) { dirty.add(j); } }
+    setSync(dirty.size ? "저장 실패 — 눌러서 다시 시도" : "저장됨 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }), dirty.size);
+  }
+  $("sync").onclick = flush;
+  addEventListener("beforeunload", e => { if (dirty.size) { e.preventDefault(); e.returnValue = ""; } });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); });
+
+  async function enter(c, remember) {
+    code = c;
+    if (REMOTE) { const j = await api({ action: "load" }); roster = j.roster || {}; store = j.grades || {}; setSync("불러옴"); }
+    else { try { store = JSON.parse(localStorage.getItem(KEY_LOCAL) || "{}") || {}; } catch (e) { store = {}; } setSync("비공개 저장소 미연결 · 이 브라우저에만 저장"); }
+    try { if (REMOTE && remember) localStorage.setItem(KEY_CODE, c); } catch (e) {}
+    prof = true; document.body.classList.add("prof"); $("mode").textContent = "교수자 모드 끄기";
+    if (!student()) st.sid = all()[0] && all()[0].id;
+    go();
+  }
+  async function leave() {
+    await flush();
+    if (dirty.size && !confirm("저장되지 않은 내용이 있습니다. 그래도 끌까요?")) return;
+    prof = false; code = ""; roster = {}; store = {}; dirty.clear();
+    try { localStorage.removeItem(KEY_CODE); } catch (e) {}
+    document.body.classList.remove("prof"); $("mode").textContent = "교수자 모드";
+    if (!student()) st.sid = S[0] && S[0].id;
+    go();
+  }
+  $("mode").onclick = () => { if (prof) return leave(); if (!REMOTE) return enter("", false); $("dlgErr").textContent = ""; $("code").value = ""; $("dlg").showModal(); };
+  $("dlgCancel").onclick = () => $("dlg").close();
+  $("dlgForm").onsubmit = async e => {
+    e.preventDefault(); $("dlgOk").disabled = true; $("dlgErr").textContent = "";
+    try { await enter($("code").value.trim(), $("remember").checked); $("dlg").close(); }
+    catch (err) { code = ""; $("dlgErr").textContent = err.message; }
+    $("dlgOk").disabled = false;
+  };
+
+  /* ── 합계 (적은 점수를 더하기만 합니다. 자동으로 판정하지 않습니다) ── */
+  function finalTotal(r) {
+    const items = R.final.items || [], sc = r.score || {};
+    return { base: items.reduce((a, it) => a + num(sc[it.id]), 0), bonus: num(r.bonus), filled: items.filter(it => sc[it.id] !== undefined && sc[it.id] !== "").length };
+  }
+  function summary(s) {
+    const n = links(s, st.task).length, base = n ? `링크 ${n}개` : "링크 없음";
+    if (!prof) return base;
+    const r = (store[s.id] || {})[st.task] || {};
+    if (st.task === "final") { const t = finalTotal(r); return base + " · " + (t.filled ? `${t.base + t.bonus}점 (${t.filled}/5 항목)` : "판단 전"); }
+    const v = Object.values(r.nums || {}), ok = v.filter(x => x === "ok").length, bad = v.filter(x => x === "bad").length;
+    return base + " · " + (ok || bad ? `확인 ${ok} · 문제 ${bad}` : "확인 전");
+  }
+
+  /* ── 왼쪽: 수강생 ── */
+  function renderList() {
+    $("list").innerHTML = all().map(s => `<button data-sid="${esc(s.id)}" aria-current="${s.id === st.sid}"><span class="nm">${esc(who(s))}</span><span class="sm">${prof && roster[s.id] ? esc(s.id) + " · " : ""}${esc(summary(s))}</span></button>`).join("") ||
+      `<p class="note" style="margin:12px">아직 등록된 제출 링크가 없습니다.</p>`;
+  }
+
+  /* ── 가운데: 결과물 보기 ── */
+  function currentUrl() {
+    const l = links(student(), st.task)[st.link];
+    if (!l) return null;
+    if (!st.num) return l.url;
+    // 번호별 주소 모양. 기본은 주소 뒤에 /01. 다르면 students.js 에 "pattern": "#/{nn}" 처럼 적습니다({nn}=01, {n}=1).
+    return l.url.replace(/\/+$/, "") + (l.pattern || "/{nn}").replace("{nn}", pad(st.num)).replace("{n}", st.num);
+  }
+  function renderView() {
+    const s = student(), ls = links(s, st.task), l = ls[st.link];
+    const sstat = l ? statusOf(l.url) : null, why = l ? (LS.links[l.url] || {}).why || "" : "";
+    $("vbar").innerHTML = `<h2>${esc(s ? who(s) : "")}</h2>` +
+      (l ? `<span class="chip ${sstat}" title="${esc(why)}">${STATUS[sstat]}</span>
+        <a class="btn" href="${esc(currentUrl())}" target="_blank" rel="noopener">새 탭으로 열기 ↗</a>
+        <span class="spacer"></span>
+        <span class="meta">화면 폭</span>
+        <div class="seg" role="group" aria-label="화면 폭">${[["fit", "맞춤"], ["1440", "1440"], ["768", "768"], ["390", "390"]].map(([v, t]) => `<button data-w="${v}" aria-pressed="${st.width === v}">${t}</button>`).join("")}</div>` : "");
+    const nl = l && numList(l);
+    $("tabs").innerHTML = ls.length
+      ? ls.map((x, i) => `<button class="tab" data-link="${i}" aria-pressed="${i === st.link}">${esc(x.label || x.url)}</button>`).join("") +
+        (nl ? `<span class="meta" style="margin-left:8px">번호</span><div class="nums"><button data-num="" aria-pressed="${!st.num}">목록</button>${nl.map(n => `<button data-num="${n}" aria-pressed="${st.num === n}">${pad(n)}</button>`).join("")}</div>` : "")
+      : `<span class="meta">이 과제로 받은 링크가 없습니다.</span>`;
+    const stage = $("stage");
+    if (!l) { stage.innerHTML = `<div class="msg"><b>제출된 링크 없음</b><span>링크가 등록되면 여기에 표시됩니다.</span></div>`; return; }
+    if (sstat === "closed") { stage.innerHTML = `<div class="msg"><b>로그인 없이 열리지 않는 주소입니다</b><span>${esc(why)}</span><span>로그인 없이 열리는 주소로 다시 받아야 합니다.</span></div>`; return; }
+    if (sstat === "link") { stage.innerHTML = `<div class="msg"><b>이 주소는 허브 화면 안에 넣을 수 없습니다</b><span>${esc(why)}</span><a class="btn primary" href="${esc(currentUrl())}" target="_blank" rel="noopener" style="justify-self:center">새 탭으로 열기 ↗</a></div>`; return; }
+    stage.innerHTML = `<iframe title="${esc(who(s))} 결과물" src="${esc(currentUrl())}" allow="camera; microphone; fullscreen" referrerpolicy="no-referrer"></iframe>`;
+    fit();
+  }
+  function fit() {
+    const f = $("stage").querySelector("iframe"); if (!f) return;
+    const box = $("stage").getBoundingClientRect(); if (!box.width) return;
+    const w = st.width === "fit" ? box.width : +st.width, k = Math.min(1, box.width / w);
+    f.style.width = w + "px"; f.style.height = (box.height / k) + "px";
+    f.style.transform = `translateX(${-(w * k) / 2}px) scale(${k})`;
+  }
+  addEventListener("resize", fit);
+
+  /* ── 오른쪽: 판단 기준 (교수자 모드에서만) ── */
+  const yes = (id, c, r) => `<label class="row"><span>${esc(c.label)}</span><input type="checkbox" data-check="${id}" ${(r.checks || {})[id] ? "checked" : ""}></label>`;
+  const cnt = (id, c, r) => `<label class="row"><span>${esc(c.label)} <span class="req">· 기준 ${c.min}개 이상</span></span><input type="number" min="0" step="1" inputmode="numeric" data-check="${id}" value="${esc((r.checks || {})[id] ?? "")}"></label>`;
+  function renderPanel() {
+    const s = student(); if (!prof || !s) { $("panel").innerHTML = ""; return; }
+    const r = rec(s.id, st.task);
+    $("panel").innerHTML = st.task === "final" ? panelFinal(r) : panelW10(r);
+    updateTotal();
+  }
+  function panelFinal(r) {
+    const F = R.final;
+    return `<h3>${esc(F.title)}</h3><p class="src">${esc(F.source)} · ${F.total}점 + 가산 최대 ${F.bonusMax}점</p>
+      <div class="note">숫자 칸은 확인한 개수를 적어 두는 메모이고, 점수는 직접 정해 적습니다.</div>
+      <details class="lv"><summary>수준 기준 (우수 · 양호 · 보통 · 미흡)</summary><dl>${F.levels.map(l => `<dt>${esc(l.id)}</dt><dd>${esc(l.text)}</dd>`).join("")}</dl></details>
+      ${F.items.map(it => `<div class="item">
+        <div class="hd"><b>${esc(it.name)}</b><span class="meta">${it.max}점</span></div>
+        <p class="look">${esc(it.look)}</p>
+        ${(it.checks || []).map(c => c.type === "yes" ? yes(c.id, c, r) : cnt(c.id, c, r)).join("")}
+        ${it.sumMin ? `<div class="row"><span>${esc(it.sumLabel)} <span class="req">· 기준 ${it.sumMin}개 이상</span></span><b data-sum="${it.id}">0</b></div>` : ""}
+        <div class="levels" role="radiogroup" aria-label="${esc(it.name)} 수준">${F.levels.map(l => `<label title="${esc(l.text)}"><input type="radio" name="lv-${it.id}" data-level="${it.id}" value="${esc(l.id)}" ${(r.level || {})[it.id] === l.id ? "checked" : ""}>${esc(l.id)}</label>`).join("")}</div>
+        <div class="score"><span>점수</span><input type="number" min="0" max="${it.max}" step="0.5" inputmode="decimal" data-score="${it.id}" value="${esc((r.score || {})[it.id] ?? "")}"><span class="meta">/ ${it.max}</span></div>
+        <textarea placeholder="판단 근거 메모" data-memo="${it.id}">${esc((r.memo || {})[it.id] || "")}</textarea>
+      </div>`).join("")}
+      <div class="item"><div class="hd"><b>제출물</b><span class="meta" id="subCount"></span></div>
+        ${F.submission.map(x => `<label class="row"><span>${esc(x.label)}</span><input type="checkbox" data-sub="${x.id}" ${(r.sub || {})[x.id] ? "checked" : ""}></label>`).join("")}</div>
+      <div class="item"><div class="hd"><b>심화 선택 모듈</b><span class="meta">가산 최대 ${F.bonusMax}점</span></div>
+        ${F.bonusModules.map(m => `<label class="row"><span>${esc(m)}</span><input type="checkbox" data-mod="${esc(m)}" ${((r.mods || []).includes(m)) ? "checked" : ""}></label>`).join("")}
+        <div class="score" style="margin-top:6px"><span>가산</span><input type="number" min="0" max="${F.bonusMax}" step="0.5" inputmode="decimal" data-bonus value="${esc(r.bonus ?? "")}"><span class="meta">/ ${F.bonusMax}</span></div>
+        <textarea placeholder="종합 의견" data-overall>${esc(r.overall || "")}</textarea></div>
+      <div class="total"><span>합계 <span class="meta" id="totalNote"></span></span><b id="total">0</b></div>`;
+  }
+  function panelW10(r) {
+    const W = R.w10;
+    return `<h3>${esc(W.title)}</h3><p class="src">${esc(W.source)}</p>
+      <div class="note">${esc(W.note)}</div>
+      <div class="item">${W.checks.map(c => yes(c.id, c, r)).join("")}</div>
+      <div class="item"><div class="hd"><b>번호별 확인 (1~${W.numbers})</b><span class="meta" id="numCount"></span></div>
+        <p class="legend">번호를 누를 때마다 확인 → 문제 → 지움 순서로 바뀝니다.</p>
+        <div class="grid46">${Array.from({ length: W.numbers }, (_, i) => i + 1).map(n => `<button data-n="${n}" data-v="${esc((r.nums || {})[n] || "")}">${pad(n)}</button>`).join("")}</div></div>
+      <div class="item"><div class="score"><span>점수</span><input type="number" min="0" step="0.5" inputmode="decimal" data-w10score value="${esc(r.score ?? "")}"><span class="meta">배점 미정</span></div>
+        <textarea placeholder="메모" data-w10memo>${esc(r.memo || "")}</textarea></div>`;
+  }
+  function updateTotal() {
+    const s = student(); if (!prof || !s) return; const r = rec(s.id, st.task);
+    if (st.task === "final") {
+      R.final.items.forEach(it => { if (!it.sumMin) return; const el = document.querySelector(`[data-sum="${it.id}"]`); if (el) el.textContent = it.checks.filter(c => c.sum).reduce((a, c) => a + num((r.checks || {})[c.id]), 0); });
+      const t = finalTotal(r);
+      if ($("total")) $("total").textContent = t.base + t.bonus;
+      if ($("totalNote")) $("totalNote").textContent = `기본 ${t.base} / ${R.final.total}` + (t.bonus ? ` + 가산 ${t.bonus}` : "") + ` · ${t.filled}/5 항목 입력`;
+      if ($("subCount")) $("subCount").textContent = `${Object.values(r.sub || {}).filter(Boolean).length} / ${R.final.submission.length}`;
+    } else if ($("numCount")) {
+      const v = Object.values(r.nums || {});
+      $("numCount").textContent = `확인 ${v.filter(x => x === "ok").length} · 문제 ${v.filter(x => x === "bad").length}`;
+    }
+    const sm = document.querySelector(`#list button[data-sid="${CSS.escape(s.id)}"] .sm`);
+    if (sm) sm.textContent = (roster[s.id] ? s.id + " · " : "") + summary(s);
+  }
+  $("panel").addEventListener("input", e => {
+    const s = student(); if (!prof || !s) return; const r = rec(s.id, st.task), d = e.target.dataset, t = e.target;
+    const put = (k, id, v) => { r[k] = r[k] || {}; r[k][id] = v; };
+    if (d.check !== undefined) put("checks", d.check, t.type === "checkbox" ? t.checked : t.value);
+    else if (d.level !== undefined) put("level", d.level, t.value);
+    else if (d.score !== undefined) put("score", d.score, t.value);
+    else if (d.memo !== undefined) put("memo", d.memo, t.value);
+    else if (d.sub !== undefined) put("sub", d.sub, t.checked);
+    else if (d.mod !== undefined) { r.mods = (r.mods || []).filter(m => m !== d.mod); if (t.checked) r.mods.push(d.mod); }
+    else if (d.bonus !== undefined) r.bonus = t.value;
+    else if (d.overall !== undefined) r.overall = t.value;
+    else if (d.w10score !== undefined) r.score = t.value;
+    else if (d.w10memo !== undefined) r.memo = t.value;
+    else return;
+    save(s.id, st.task); updateTotal();
+  });
+  $("panel").addEventListener("click", e => {
+    const b = e.target.closest("button[data-n]"); if (!b || !prof) return;
+    const s = student(), r = rec(s.id, "w10"); r.nums = r.nums || {};
+    const next = { "": "ok", ok: "bad", bad: "" }[b.dataset.v || ""];
+    if (next) r.nums[b.dataset.n] = next; else delete r.nums[b.dataset.n];
+    b.dataset.v = next; save(s.id, "w10"); updateTotal();
+    const l = links(s, "w10")[st.link], nl = l && numList(l);   // 번호별 화면이 있는 링크면 그 번호 화면을 같이 엽니다
+    if (nl && nl.includes(+b.dataset.n) && st.num !== +b.dataset.n) { st.num = +b.dataset.n; renderView(); }
+  });
+
+  /* ── 이동 ── */
+  function go() { renderHeader(); renderList(); renderView(); renderPanel(); }
+  function renderHeader() {
+    $("taskSeg").innerHTML = TASKS.map(([v, t]) => `<button data-task="${v}" aria-pressed="${st.task === v}">${t}</button>`).join("");
+    $("meta").textContent = `${all().length}명 · 링크 점검 ${LS.checkedAt || "전"}`;
+  }
+  const pick = sid => { st.sid = sid; st.link = 0; st.num = null; go(); };
+  $("taskSeg").addEventListener("click", e => { const b = e.target.closest("[data-task]"); if (!b) return; st.task = b.dataset.task; st.link = 0; st.num = null; go(); });
+  $("list").addEventListener("click", e => { const b = e.target.closest("[data-sid]"); if (b) pick(b.dataset.sid); });
+  $("vbar").addEventListener("click", e => { const b = e.target.closest("[data-w]"); if (!b) return; st.width = b.dataset.w; renderView(); });
+  $("tabs").addEventListener("click", e => {
+    const a = e.target.closest("[data-link]"), n = e.target.closest("[data-num]");
+    if (a) { st.link = +a.dataset.link; st.num = null; renderView(); }
+    else if (n) { st.num = n.dataset.num ? +n.dataset.num : null; renderView(); }
+  });
+  const step = d => { const A = all(), i = A.findIndex(s => s.id === st.sid), j = Math.min(A.length - 1, Math.max(0, i + d)); if (A[j] && j !== i) pick(A[j].id); };
+  $("prev").onclick = () => step(-1); $("next").onclick = () => step(1);
+
+  /* ── 내려받기 ── */
+  const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  $("exportCsv").onclick = () => {
+    if (!prof) return;
+    const idc = s => [s.id, (roster[s.id] || {}).no || "", (roster[s.id] || {}).name || ""];
+    let head, rows;
+    if (st.task === "final") {
+      const F = R.final, checks = F.items.flatMap(it => it.checks || []);
+      head = ["별칭", "학번", "이름", ...F.items.flatMap(it => [`${it.name} (${it.max})`, `${it.name} 수준`]), `가산 (${F.bonusMax})`, "합계", ...checks.map(c => c.label), "제출물 수", "심화 모듈", ...F.items.map(it => `${it.name} 메모`), "종합 의견"];
+      rows = all().map(s => { const r = (store[s.id] || {}).final || {}, t = finalTotal(r);
+        return [...idc(s), ...F.items.flatMap(it => [(r.score || {})[it.id] ?? "", (r.level || {})[it.id] ?? ""]), r.bonus ?? "", t.filled ? t.base + t.bonus : "",
+          ...checks.map(c => { const v = (r.checks || {})[c.id]; return c.type === "yes" ? (v ? "예" : "") : (v ?? ""); }),
+          Object.values(r.sub || {}).filter(Boolean).length, (r.mods || []).join(" · "), ...F.items.map(it => (r.memo || {})[it.id] || ""), r.overall || ""]; });
+    } else {
+      const W = R.w10;
+      head = ["별칭", "학번", "이름", ...W.checks.map(c => c.label), "확인한 번호 수", "문제 번호", "점수", "메모"];
+      rows = all().map(s => { const r = (store[s.id] || {}).w10 || {}, n = r.nums || {};
+        return [...idc(s), ...W.checks.map(c => (r.checks || {})[c.id] ? "예" : ""), Object.values(n).filter(v => v === "ok").length,
+          Object.keys(n).filter(k => n[k] === "bad").map(k => pad(k)).join(" "), r.score ?? "", r.memo || ""]; });
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + [head, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
+    a.download = `제출허브-${st.task === "final" ? "기말" : "10주차"}-판단내용.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  go();
+  // 이 기기에 접속 코드를 기억해 두었으면 바로 교수자 모드로 들어갑니다.
+  let saved = ""; try { saved = (REMOTE && localStorage.getItem(KEY_CODE)) || ""; } catch (e) {}
+  if (saved) enter(saved, true).catch(() => { code = ""; try { localStorage.removeItem(KEY_CODE); } catch (e) {} });
+})();
+</script>
+</body>
+</html>

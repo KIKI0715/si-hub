@@ -1,0 +1,33 @@
+name: 링크 점검
+# students.js 가 바뀌거나 하루 한 번(한국 시각 06:00) 링크를 다시 열어 보고 link-status.js 를 고쳐 올립니다.
+on:
+  push:
+    branches: [main]
+    paths: [students.js, check_links.py]
+  schedule:
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: check-links
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 check_links.py
+      - name: 결과 올리기
+        run: |
+          if git diff --quiet -- link-status.js; then echo "변화 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add link-status.js
+          git commit -m "링크 점검 결과 갱신"
+          git push

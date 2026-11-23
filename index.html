@@ -240,8 +240,10 @@ try { if (sessionStorage.getItem("si-hub-token") || localStorage.getItem("si-hub
     prof = on && canProf; document.body.classList.toggle("prof", prof);
     $("mode").textContent = prof ? "교수자 모드 끄기" : "교수자 모드";
   }
-  async function enterHub() {
-    const j = await api({ action: "hub" });
+  // pre = 로그인 응답에 같이 실려 온 목록. 있으면 다시 묻지 않습니다.
+  async function enterHub(pre) {
+    if (pre && !pre.ok) throw new Error(pre.error || "불러오지 못했습니다.");
+    const j = pre || await api({ action: "hub" });
     S = j.students || []; LS = j.linkStatus || { links: {} };
     canProf = j.role === "교수자"; roster = j.roster || {}; store = j.grades || {};
     $("mode").hidden = !canProf; setProf(canProf);
@@ -280,11 +282,11 @@ try { if (sessionStorage.getItem("si-hub-token") || localStorage.getItem("si-hub
     $("gateOk").disabled = true; $("gateErr").textContent = "";
     try {
       const keep = $("keep").checked;
-      const j = await call({ action: "login", id: $("uid").value, pw: $("upw").value, keep });
+      const j = await call({ action: "login", id: $("uid").value, pw: $("upw").value, keep, want: "hub" });
       if (!j.ok) throw new Error(j.error || "로그인하지 못했습니다.");
       token = j.token; $("upw").value = "";
       try { (keep ? localStorage : sessionStorage).setItem(KEY_TOKEN, token); } catch (e2) {}
-      await enterHub();
+      await enterHub(j.data);
     } catch (err) { if (!$("gate").hidden) $("gateErr").textContent = err.message || "연결하지 못했습니다."; }
     $("gateOk").disabled = false;
   };

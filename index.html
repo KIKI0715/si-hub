@@ -355,7 +355,9 @@ try { if (sessionStorage.getItem("si-hub-token") || localStorage.getItem("si-hub
     if (!l) { stage.innerHTML = `<div class="msg"><b>제출된 링크 없음</b><span>링크가 등록되면 여기에 표시됩니다.</span></div>`; return; }
     if (sstat === "closed") { stage.innerHTML = `<div class="msg"><b>로그인 없이 열리지 않는 주소입니다</b><span>${esc(why)}</span><span>로그인 없이 열리는 주소로 다시 받아야 합니다.</span></div>`; return; }
     if (sstat === "link") { stage.innerHTML = `<div class="msg"><b>이 주소는 허브 화면 안에 넣을 수 없습니다</b><span>${esc(why)}</span><a class="btn primary" href="${esc(currentUrl())}" target="_blank" rel="noopener" style="justify-self:center">새 탭으로 열기</a></div>`; return; }
-    stage.innerHTML = `<iframe title="${esc(who(s))} 결과물" src="${esc(currentUrl())}" allow="camera; microphone; fullscreen" referrerpolicy="no-referrer"></iframe>`;
+    // 이 허브와 같은 곳에 올려 둔 사본은 허브의 로그인 정보에 닿지 못하게 따로 떼어서 엽니다.
+    let mine = false; try { mine = new URL(currentUrl(), location.href).origin === location.origin; } catch (e) {}
+    stage.innerHTML = `<iframe title="${esc(who(s))} 결과물" src="${esc(currentUrl())}"${mine ? ' sandbox="allow-scripts allow-forms allow-pointer-lock allow-popups"' : ""} allow="camera; microphone; fullscreen" referrerpolicy="no-referrer"></iframe>`;
     fit();
   }
   function fit() {

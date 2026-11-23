@@ -198,6 +198,13 @@ try { if (sessionStorage.getItem("si-hub-token") || localStorage.getItem("si-hub
   // prof = 이름·학번과 판단 칸을 보이는 중인지. canProf = 이 계정이 그럴 수 있는지(역할이 교수자).
   let prof = false, canProf = false, token = "", roster = {}, store = {};
   const st = { task: "w10", sid: null, link: 0, num: null, width: "fit" };
+  // 보던 자리(과제·별칭·탭)를 이 탭에만 적어 둡니다. 결과물을 열었다가 돌아와도 같은 자리로 옵니다. 이름·점수는 적지 않습니다.
+  const KEY_VIEW = "si-hub-view";
+  const keepView = () => { try { sessionStorage.setItem(KEY_VIEW, JSON.stringify({ task: st.task, sid: st.sid, link: st.link, num: st.num })); } catch (e) {} };
+  try {
+    const v = JSON.parse(sessionStorage.getItem(KEY_VIEW) || "null");
+    if (v && TASKS.some(t => t[0] === v.task)) { st.task = v.task; st.sid = typeof v.sid === "string" ? v.sid : null; st.link = v.link > 0 ? Math.floor(v.link) : 0; st.num = v.num > 0 ? Math.floor(v.num) : null; }
+  } catch (e) {}
   const all = () => S;
   const student = () => all().find(s => s.id === st.sid);
   const who = s => prof && roster[s.id] ? `${roster[s.id].name} · ${roster[s.id].no}` : (s.label || s.id);
@@ -235,7 +242,7 @@ try { if (sessionStorage.getItem("si-hub-token") || localStorage.getItem("si-hub
 
   /* ── 들어오기 · 나가기 ── */
   const settle = () => document.documentElement.classList.remove("entering");
-  const forget = () => { try { sessionStorage.removeItem(KEY_TOKEN); localStorage.removeItem(KEY_TOKEN); } catch (e) {} };
+  const forget = () => { try { sessionStorage.removeItem(KEY_TOKEN); localStorage.removeItem(KEY_TOKEN); sessionStorage.removeItem(KEY_VIEW); } catch (e) {} };
   function setProf(on) {
     prof = on && canProf; document.body.classList.toggle("prof", prof);
     $("mode").textContent = prof ? "교수자 모드 끄기" : "교수자 모드";
@@ -247,7 +254,8 @@ try { if (sessionStorage.getItem("si-hub-token") || localStorage.getItem("si-hub
     S = j.students || []; LS = j.linkStatus || { links: {} };
     canProf = j.role === "교수자"; roster = j.roster || {}; store = j.grades || {};
     $("mode").hidden = !canProf; setProf(canProf);
-    if (!student()) st.sid = S[0] && S[0].id;
+    if (!student()) { st.sid = S[0] && S[0].id; st.link = 0; st.num = null; }
+    if (st.link >= links(student(), st.task).length) { st.link = 0; st.num = null; }
     $("gate").hidden = true; $("app").hidden = false; settle();
     setSync(canProf ? "불러옴" : ""); go();
     if (canProf) adopt();
@@ -329,6 +337,7 @@ try { if (sessionStorage.getItem("si-hub-token") || localStorage.getItem("si-hub
     return l.url.replace(/\/+$/, "") + (l.pattern || "/{nn}").replace("{nn}", pad(st.num)).replace("{n}", st.num);
   }
   function renderView() {
+    keepView();
     const s = student(), ls = links(s, st.task), l = ls[st.link];
     const sstat = l ? statusOf(l.url) : null, why = l ? (LS.links[l.url] || {}).why || "" : "";
     $("vbar").innerHTML = `<h2>${esc(s ? who(s) : "")}</h2>` +

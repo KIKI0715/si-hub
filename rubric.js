@@ -84,5 +84,89 @@ window.RUBRIC = {
     checks: [
       { id: "open", type: "yes", label: "공유 링크가 로그인 없이 열림" }
     ]
+  },
+  // 기말 기획서. 교수님 기말과제 안내 11번(일정)의 12주 할 일 다섯 가지를, 2·3·4·13번의 문장대로 확인하는 칸입니다.
+  // 안내문에 기획서 배점이 없어서 점수는 정하지 않았습니다. basis 는 안내문에서 옮긴 문장입니다.
+  plan: {
+    title: "기말 기획서 (12주 체크포인트)",
+    source: "교수님 기말과제 안내 11. 일정 · 12주",
+    note: "안내문에 기획서의 배점과 제출 형식이 없습니다. 12주 할 일 다섯 가지를 안내문 문장대로 확인하고, 점수 칸은 비워 두었습니다.",
+    checkpoint: "스토리보드와 DESIGN.md를 수업에서 보여 줄 수 있다",
+    groups: [
+      { id: "target", name: "대상 확정", src: "2. 소개 대상 고르기", look: "제품 · 사람 · 분해도 가운데 하나, 고를 때 물어볼 것 세 가지",
+        pick: { id: "type", label: "유형", options: ["제품", "사람", "분해도"] },
+        checks: [
+          { id: "tHand", type: "yes", label: "손 인식 인터랙션 2개가 들어갈 자리가 있음" },
+          { id: "tStory", type: "yes", label: "섹션 6개를 채울 이야기가 있음" },
+          { id: "tSource", type: "yes", label: "사진과 자료를 직접 찍거나 구할 수 있음" },
+          { id: "tRule", type: "yes", label: "꼭 지킬 것에 어긋나지 않음 (실존 인물은 공개된 정보만 · 수치에는 출처나 '근사')" }
+        ],
+        basis: [
+          "제품, 사람, 분해도 가운데 하나를 고른다.",
+          "손으로 만져 보고 싶어지는 대상인가. 손 인식 인터랙션 2개가 자연스럽게 들어갈 자리가 있어야 한다.",
+          "섹션 6개를 채울 이야기가 있는가.",
+          "사진과 자료를 직접 찍거나 구할 수 있는가.",
+          "실존 인물은 공개된 정보와 직접 찍거나 만든 소재만 쓴다. 본인 동의 없이 사적인 정보를 넣지 않는다.",
+          "분해도에 넣는 수치(크기, 무게, 성능)에는 출처를 붙인다. 출처를 찾지 못한 숫자는 빼거나 '근사'라고 적는다."
+        ] },
+      { id: "refs", name: "레퍼런스 3곳 분석", src: "3. 사이트 뼈대", look: "레퍼런스 3곳, 사이트마다 모션 언어",
+        checks: [
+          { id: "rCount", type: "count", min: 3, label: "레퍼런스 수" },
+          { id: "rGallery", type: "yes", label: "안내한 갤러리에서 고름 (awwwards · godly · GDWEB · Webzibition · Supahero)" },
+          { id: "rMotion", type: "count", min: 3, label: "모션 언어를 적은 사이트 수 (속도 · 이징 · 화면이 바뀌는 방식 · 글자를 다루는 방식)" }
+        ],
+        basis: [
+          "awwwards, godly, GDWEB, Webzibition, Supahero에서 고른다.",
+          "사이트마다 모션 언어를 적는다. 움직임의 속도, 이징(빨라지고 느려지는 방식), 화면이 바뀌는 방식, 글자를 다루는 방식."
+        ] },
+      { id: "mix", name: "섞는 규칙", src: "3. 사이트 뼈대", look: "섞는 규칙을 직접 썼는가",
+        checks: [
+          { id: "mWritten", type: "yes", label: "섞는 규칙을 문장으로 직접 씀" },
+          { id: "mMapped", type: "yes", label: "무엇을 어느 레퍼런스에서 가져오는지 나뉘어 있음 (구조는 A, 글자는 B, 색은 C)" }
+        ],
+        basis: [
+          "예: \"구조는 A처럼 한 화면씩 고정되며 넘어가고, 글자는 B처럼 줄 단위로 걷히고, 색은 C처럼 흑백에 한 색만 쓴다.\"",
+          "AI에게 '세 사이트를 섞어 달라'고 맡기지 않는다. 섞는 규칙 자체가 평가 대상이다."
+        ] },
+      { id: "board", name: "섹션 스토리보드", src: "3. 사이트 뼈대 · 13. 평가 기준", look: "섹션 6개 이상, 섹션 흐름이 대상을 이해시키는가",
+        checks: [
+          { id: "bCount", type: "count", min: 6, label: "섹션 수" },
+          { id: "bFlow", type: "yes", label: "섹션 흐름이 대상을 이해시키는 순서임" },
+          { id: "bCore", type: "yes", label: "유형의 중심 섹션이 있음 (제품: 직접 조작 · 사람: 연대기와 작업 갤러리 · 분해도: 분해)" }
+        ],
+        basis: [
+          "섹션을 6개 이상 쌓는다. 아래 흐름을 출발점으로 삼고, 대상에 맞게 바꾼다. (첫인상 · 맥락 · 핵심 · 세부 · 데이터 · 마무리)",
+          "중심이 되는 섹션 — 제품: 직접 조작해 보는 섹션 / 사람: 연대기와 작업 갤러리 / 분해도: 전체에서 부품으로 들어가는 분해 섹션",
+          "섹션 6개 이상, 섹션 흐름이 대상을 이해시키는가"
+        ] },
+      { id: "design", name: "DESIGN.md 초안", src: "3. 사이트 뼈대", look: "색, 글꼴, 간격, 모션 규칙을 숫자로",
+        checks: [
+          { id: "dColor", type: "yes", label: "색 규칙이 적혀 있음" },
+          { id: "dFont", type: "yes", label: "글꼴 규칙이 적혀 있음" },
+          { id: "dSpace", type: "yes", label: "간격 규칙이 적혀 있음" },
+          { id: "dMotion", type: "yes", label: "모션 규칙이 숫자로 적혀 있음 (전환 시간 · 이징 · 차례 간격)" },
+          { id: "dLicense", type: "yes", label: "글꼴 라이선스를 확인함" }
+        ],
+        basis: [
+          "DESIGN.md는 사이트의 디자인 규칙을 적은 텍스트 파일이다. 색, 글꼴, 간격, 그리고 모션 규칙을 숫자로 적는다. 예: 기본 전환 0.4초, ease-out, 차례로 나타날 때 간격 0.08초.",
+          "글꼴 조합의 근거는 Fonts In Use와 TypePair에서, 한글 글꼴은 산돌구름과 Freefaces에서 찾고 라이선스를 확인한다."
+        ] },
+      { id: "inter", name: "인터랙션 계획", optional: true, src: "4. 필수 인터랙션 12개", look: "12주 할 일에는 없는 항목. 기획서에 적어 온 경우에만 확인",
+        checks: [
+          { id: "iP1", type: "count", min: 5, label: "1부(#1–46)에서 고른 수", sum: true },
+          { id: "iP1cd", type: "yes", label: "그중 C 드래그·입력 또는 D 값→상태가 1개 이상" },
+          { id: "iP2", type: "count", min: 5, label: "2부(#52–97)에서 고른 수", sum: true },
+          { id: "iP2cats", type: "count", min: 4, label: "2부에서 서로 다른 범주(K~S) 수" },
+          { id: "iP2hard", type: "count", min: 2, label: "2부에서 난이도 ●● 카드 수" },
+          { id: "iHand", type: "count", min: 2, label: "손 인식 인터랙션 수", sum: true },
+          { id: "iHandDirect", type: "yes", label: "손 인식 · 직접 조작형 1개 이상" },
+          { id: "iHandGesture", type: "yes", label: "손 인식 · 제스처 판정형 1개 이상" }
+        ],
+        sumMin: 12, sumLabel: "합계 (1부 + 2부 + 손 인식)",
+        basis: [
+          "카탈로그 1부에서 5개, 2부에서 5개, 손 인식 2개. 모두 합쳐 12개 이상이다.",
+          "1부: C 드래그·입력 또는 D 값→상태에서 1개 이상 / 2부: 서로 다른 범주(K~S) 4개 이상, 난이도 ●● 카드 2개 이상 / 손 인식: 직접 조작형 1개 + 제스처 판정형 1개"
+        ] }
+    ]
   }
 };

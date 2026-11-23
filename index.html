@@ -75,6 +75,8 @@
   details.lv summary{cursor:pointer;font-weight:600;color:var(--ink2)}
   details.lv dl{margin:8px 0 2px;display:grid;grid-template-columns:3em 1fr;gap:6px 8px}
   details.lv dt{font-weight:700} details.lv dd{margin:0;color:var(--ink2)}
+  details.lv .basis{margin:8px 0 0;padding:0 0 0 16px;display:grid;gap:4px;color:var(--ink2)}
+  .item details.lv{margin:12px 0 0}
   .item{border-top:1px solid var(--line);padding:18px 0 16px}
   .item .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
   .item .hd b{font-size:17px;font-weight:700}
@@ -123,6 +125,9 @@
   .gate .err{color:var(--bad);min-height:20px;font-size:13px;margin:0}
   .gate .btn{padding:12px;font-size:15px;border-radius:var(--r-field)}
   .gate .btn[disabled]{background:var(--soft);color:var(--muted);cursor:default}
+  .gate .loading{display:none;margin:0;color:var(--ink2)}
+  .entering .gate form{display:none}
+  .entering .gate .loading{display:block}
   @media (max-width:1100px){
     .app{height:auto} html,body{height:auto}
     main, body.prof main{grid-template-columns:1fr}
@@ -132,6 +137,10 @@
     .total{bottom:0}
   }
 </style>
+<script>
+/* 출입증이 남아 있으면 로그인 칸을 그리지 않고 "불러오는 중"부터 보여 줍니다. 목록을 받거나 받지 못하면 아래 스크립트가 이 표시를 지웁니다. */
+try { if (sessionStorage.getItem("si-hub-token") || localStorage.getItem("si-hub-token")) document.documentElement.classList.add("entering"); } catch (e) {}
+</script>
 </head>
 <body>
 <section class="gate" id="gate">
@@ -143,6 +152,7 @@
     <p class="err" id="gateErr" role="alert"></p>
     <button type="submit" class="btn primary" id="gateOk">로그인</button>
   </form>
+  <p class="loading" role="status">불러오는 중입니다</p>
 </section>
 <div class="app" id="app" hidden>
   <header>
@@ -168,7 +178,7 @@
   </main>
 </div>
 <script src="config.js?v=20261120a"></script>
-<script src="rubric.js?v=20261120a"></script>
+<script src="rubric.js?v=20261121a"></script>
 <script>
 (() => {
   const CFG = window.HUB_CONFIG || {};
@@ -177,7 +187,7 @@
   const ENDPOINT = (LOCAL && new URLSearchParams(location.search).get("api")) || CFG.endpoint || "";
   let S = [], LS = { links: {} };
   const R = window.RUBRIC || {};
-  const TASKS = [["w10", "10주차 과제"], ["w11", "11주차 과제"], ["final", "기말과제"]];
+  const TASKS = [["w10", "10주차 과제"], ["w11", "11주차 과제"], ["plan", "기말 기획서"], ["final", "기말과제"]];
   const KEY_LOCAL = "si-hub-v2-judgement", KEY_TOKEN = "si-hub-token";
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -224,6 +234,7 @@
   document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); });
 
   /* ── 들어오기 · 나가기 ── */
+  const settle = () => document.documentElement.classList.remove("entering");
   const forget = () => { try { sessionStorage.removeItem(KEY_TOKEN); localStorage.removeItem(KEY_TOKEN); } catch (e) {} };
   function setProf(on) {
     prof = on && canProf; document.body.classList.toggle("prof", prof);
@@ -235,7 +246,7 @@
     canProf = j.role === "교수자"; roster = j.roster || {}; store = j.grades || {};
     $("mode").hidden = !canProf; setProf(canProf);
     if (!student()) st.sid = S[0] && S[0].id;
-    $("gate").hidden = true; $("app").hidden = false;
+    $("gate").hidden = true; $("app").hidden = false; settle();
     setSync(canProf ? "불러옴" : ""); go();
     if (canProf) adopt();
   }
@@ -243,7 +254,7 @@
     token = ""; forget(); dirty.clear(); clearTimeout(timer);
     S = []; LS = { links: {} }; roster = {}; store = {}; canProf = false; setProf(false);
     $("list").innerHTML = ""; $("vbar").innerHTML = ""; $("tabs").innerHTML = ""; $("stage").innerHTML = ""; $("panel").innerHTML = "";
-    $("app").hidden = true; $("gate").hidden = false; $("gateErr").textContent = msg || ""; $("gateOk").disabled = !ENDPOINT;
+    $("app").hidden = true; $("gate").hidden = false; settle(); $("gateErr").textContent = msg || ""; $("gateOk").disabled = !ENDPOINT;
   }
   // 저장소를 연결하기 전에 이 브라우저에만 적어 둔 판단 내용이 있으면, 저장소에 없는 것만 옮깁니다.
   function adopt() {
@@ -283,10 +294,19 @@
     const items = R.final.items || [], sc = r.score || {};
     return { base: items.reduce((a, it) => a + num(sc[it.id]), 0), bonus: num(r.bonus), filled: items.filter(it => sc[it.id] !== undefined && sc[it.id] !== "").length };
   }
+  // 기획서: 확인한 줄 수를 셉니다. 개수 칸은 기준 이상일 때만 셉니다. 점수로 바꾸지 않습니다.
+  const planHit = (c, r) => { const v = (r.checks || {})[c.id]; return c.type === "yes" ? !!v : (v !== undefined && v !== "" && num(v) >= c.min); };
+  const planMet = (g, r) => (g.pick && (r.pick || {})[g.pick.id] ? 1 : 0) + g.checks.filter(c => planHit(c, r)).length;
+  const planSize = g => g.checks.length + (g.pick ? 1 : 0);
+  function planTotal(r) {
+    const G = (R.plan.groups || []).filter(g => !g.optional);
+    return { met: G.reduce((a, g) => a + planMet(g, r), 0), size: G.reduce((a, g) => a + planSize(g), 0) };
+  }
   function summary(s) {
     const n = links(s, st.task).length, base = n ? `링크 ${n}개` : "링크 없음";
     if (!prof) return base;
     const r = (store[s.id] || {})[st.task] || {};
+    if (st.task === "plan") { const t = planTotal(r); return base + " · " + (t.met ? `확인 ${t.met}/${t.size}` : "확인 전"); }
     if (st.task === "final") { const t = finalTotal(r); return base + " · " + (t.filled ? `${t.base + t.bonus}점 (${t.filled}/5 항목)` : "판단 전"); }
     const v = Object.values(r.nums || {}), ok = v.filter(x => x === "ok").length, bad = v.filter(x => x === "bad").length;
     return base + " · " + (ok || bad ? `확인 ${ok} · 문제 ${bad}` : "확인 전");
@@ -311,7 +331,7 @@
     const sstat = l ? statusOf(l.url) : null, why = l ? (LS.links[l.url] || {}).why || "" : "";
     $("vbar").innerHTML = `<h2>${esc(s ? who(s) : "")}</h2>` +
       (l ? `<span class="chip ${sstat}" title="${esc(why)}">${STATUS[sstat]}</span>
-        <a class="btn" href="${esc(currentUrl())}" target="_blank" rel="noopener">새 탭으로 열기 ↗</a>
+        <a class="btn" href="${esc(currentUrl())}" target="_blank" rel="noopener">새 탭으로 열기</a>
         <span class="spacer"></span>
         <span class="meta">화면 폭</span>
         <div class="seg" role="group" aria-label="화면 폭">${[["fit", "맞춤"], ["1440", "1440"], ["768", "768"], ["390", "390"]].map(([v, t]) => `<button data-w="${v}" aria-pressed="${st.width === v}">${t}</button>`).join("")}</div>` : "");
@@ -323,7 +343,7 @@
     const stage = $("stage");
     if (!l) { stage.innerHTML = `<div class="msg"><b>제출된 링크 없음</b><span>링크가 등록되면 여기에 표시됩니다.</span></div>`; return; }
     if (sstat === "closed") { stage.innerHTML = `<div class="msg"><b>로그인 없이 열리지 않는 주소입니다</b><span>${esc(why)}</span><span>로그인 없이 열리는 주소로 다시 받아야 합니다.</span></div>`; return; }
-    if (sstat === "link") { stage.innerHTML = `<div class="msg"><b>이 주소는 허브 화면 안에 넣을 수 없습니다</b><span>${esc(why)}</span><a class="btn primary" href="${esc(currentUrl())}" target="_blank" rel="noopener" style="justify-self:center">새 탭으로 열기 ↗</a></div>`; return; }
+    if (sstat === "link") { stage.innerHTML = `<div class="msg"><b>이 주소는 허브 화면 안에 넣을 수 없습니다</b><span>${esc(why)}</span><a class="btn primary" href="${esc(currentUrl())}" target="_blank" rel="noopener" style="justify-self:center">새 탭으로 열기</a></div>`; return; }
     stage.innerHTML = `<iframe title="${esc(who(s))} 결과물" src="${esc(currentUrl())}" allow="camera; microphone; fullscreen" referrerpolicy="no-referrer"></iframe>`;
     fit();
   }
@@ -342,7 +362,7 @@
   function renderPanel() {
     const s = student(); if (!prof || !s) { $("panel").innerHTML = ""; return; }
     const r = rec(s.id, st.task);
-    $("panel").innerHTML = st.task === "final" ? panelFinal(r) : panelW10(r);
+    $("panel").innerHTML = st.task === "final" ? panelFinal(r) : st.task === "plan" ? panelPlan(r) : panelW10(r);
     updateTotal();
   }
   function panelFinal(r) {
@@ -367,6 +387,23 @@
         <textarea placeholder="종합 의견" data-overall>${esc(r.overall || "")}</textarea></div>
       <div class="total"><span>합계 <span class="meta" id="totalNote"></span></span><b id="total">0</b></div>`;
   }
+  function panelPlan(r) {
+    const P = R.plan;
+    return `<h3>${esc(P.title)}</h3><p class="src">${esc(P.source)} · 주 끝 체크포인트 "${esc(P.checkpoint)}"</p>
+      <div class="note">${esc(P.note)}</div>
+      ${P.groups.map(g => `<div class="item">
+        <div class="hd"><b>${esc(g.name)}${g.optional ? ` <span class="chip unknown">선택</span>` : ""}</b><span class="meta" data-met="${g.id}"></span></div>
+        <p class="look">${esc(g.look)}</p>
+        ${g.pick ? `<div class="levels" role="radiogroup" aria-label="${esc(g.pick.label)}">${g.pick.options.map(o => `<label><input type="radio" name="pk-${g.pick.id}" data-pick="${g.pick.id}" value="${esc(o)}" ${(r.pick || {})[g.pick.id] === o ? "checked" : ""}>${esc(o)}</label>`).join("")}</div>` : ""}
+        ${g.checks.map(c => c.type === "yes" ? yes(c.id, c, r) : cnt(c.id, c, r)).join("")}
+        ${g.sumMin ? `<div class="row"><span>${esc(g.sumLabel)} <span class="req">· 기준 ${g.sumMin}개 이상</span></span><b data-sum="${g.id}">0</b></div>` : ""}
+        <details class="lv"><summary>안내문 ${esc(g.src)}</summary><ul class="basis">${g.basis.map(b => `<li>${esc(b)}</li>`).join("")}</ul></details>
+        <textarea placeholder="메모" data-memo="${g.id}">${esc((r.memo || {})[g.id] || "")}</textarea>
+      </div>`).join("")}
+      <div class="item"><div class="score"><span>점수</span><input type="number" min="0" step="0.5" inputmode="decimal" data-w10score value="${esc(r.score ?? "")}"><span class="meta">배점 미정</span></div>
+        <textarea placeholder="종합 의견" data-overall>${esc(r.overall || "")}</textarea></div>
+      <div class="total"><span>확인한 줄 <span class="meta">선택 항목 제외</span></span><b id="total">0</b></div>`;
+  }
   function panelW10(r) {
     const W = R[st.task] || R.w10, ns = span(st.task);
     return `<h3>${esc(W.title)}</h3><p class="src">${esc(W.source)}</p>
@@ -386,6 +423,12 @@
       if ($("total")) $("total").textContent = t.base + t.bonus;
       if ($("totalNote")) $("totalNote").textContent = `기본 ${t.base} / ${R.final.total}` + (t.bonus ? ` + 가산 ${t.bonus}` : "") + ` · ${t.filled}/5 항목 입력`;
       if ($("subCount")) $("subCount").textContent = `${Object.values(r.sub || {}).filter(Boolean).length} / ${R.final.submission.length}`;
+    } else if (st.task === "plan") {
+      R.plan.groups.forEach(g => {
+        const m = document.querySelector(`[data-met="${g.id}"]`); if (m) m.textContent = `${planMet(g, r)} / ${planSize(g)}`;
+        const el = g.sumMin && document.querySelector(`[data-sum="${g.id}"]`); if (el) el.textContent = g.checks.filter(c => c.sum).reduce((a, c) => a + num((r.checks || {})[c.id]), 0);
+      });
+      const t = planTotal(r); if ($("total")) $("total").textContent = `${t.met} / ${t.size}`;
     } else if ($("numCount")) {
       const v = Object.values(r.nums || {});
       $("numCount").textContent = `확인 ${v.filter(x => x === "ok").length} · 문제 ${v.filter(x => x === "bad").length}`;
@@ -398,6 +441,7 @@
     const put = (k, id, v) => { r[k] = r[k] || {}; r[k][id] = v; };
     if (d.check !== undefined) put("checks", d.check, t.type === "checkbox" ? t.checked : t.value);
     else if (d.level !== undefined) put("level", d.level, t.value);
+    else if (d.pick !== undefined) put("pick", d.pick, t.value);
     else if (d.score !== undefined) put("score", d.score, t.value);
     else if (d.memo !== undefined) put("memo", d.memo, t.value);
     else if (d.sub !== undefined) put("sub", d.sub, t.checked);
@@ -407,6 +451,8 @@
     else if (d.w10score !== undefined) r.score = t.value;
     else if (d.w10memo !== undefined) r.memo = t.value;
     else return;
+    // 시트의 성적_기획서 탭에 그대로 적히는 요약입니다.
+    if (st.task === "plan") { r.met = {}; R.plan.groups.forEach(g => { r.met[g.id] = planMet(g, r); }); r.metAll = planTotal(r).met; }
     save(s.id, st.task); updateTotal();
   });
   $("panel").addEventListener("click", e => {
@@ -450,6 +496,12 @@
         return [...idc(s), ...F.items.flatMap(it => [(r.score || {})[it.id] ?? "", (r.level || {})[it.id] ?? ""]), r.bonus ?? "", t.filled ? t.base + t.bonus : "",
           ...checks.map(c => { const v = (r.checks || {})[c.id]; return c.type === "yes" ? (v ? "예" : "") : (v ?? ""); }),
           Object.values(r.sub || {}).filter(Boolean).length, (r.mods || []).join(" · "), ...F.items.map(it => (r.memo || {})[it.id] || ""), r.overall || ""]; });
+    } else if (st.task === "plan") {
+      const G = R.plan.groups, checks = G.flatMap(g => g.checks);
+      head = ["별칭", "학번", "이름", ...G.filter(g => g.pick).map(g => g.pick.label), ...G.map(g => `${g.name} (${planSize(g)})`), "확인한 줄 (선택 항목 제외)", "점수", ...checks.map(c => c.label), ...G.map(g => `${g.name} 메모`), "종합 의견"];
+      rows = all().map(s => { const r = (store[s.id] || {}).plan || {}, t = planTotal(r);
+        return [...idc(s), ...G.filter(g => g.pick).map(g => (r.pick || {})[g.pick.id] || ""), ...G.map(g => planMet(g, r)), t.met, r.score ?? "",
+          ...checks.map(c => { const v = (r.checks || {})[c.id]; return c.type === "yes" ? (v ? "예" : "") : (v ?? ""); }), ...G.map(g => (r.memo || {})[g.id] || ""), r.overall || ""]; });
     } else {
       const W = R[st.task] || R.w10;
       head = ["별칭", "학번", "이름", ...W.checks.map(c => c.label), "확인한 번호 수", "문제 번호", "점수", "메모"];
@@ -459,16 +511,16 @@
     }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["﻿" + [head, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
-    a.download = `제출허브-${st.task === "final" ? "기말" : st.task === "w11" ? "11주차" : "10주차"}-판단내용.csv`;
+    a.download = `제출허브-${{ final: "기말", plan: "기획서", w11: "11주차" }[st.task] || "10주차"}-판단내용.csv`;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
   /* ── 시작: 출입증이 남아 있으면 바로 들어가고, 아니면 로그인 화면 ── */
   try { localStorage.removeItem("si-hub-v2-code"); } catch (e) {}
-  if (!ENDPOINT) { $("gateOk").disabled = true; $("gateErr").textContent = "저장소가 아직 연결되지 않았습니다."; }
+  if (!ENDPOINT) { settle(); $("gateOk").disabled = true; $("gateErr").textContent = "저장소가 아직 연결되지 않았습니다."; }
   else {
     try { token = sessionStorage.getItem(KEY_TOKEN) || localStorage.getItem(KEY_TOKEN) || ""; } catch (e) {}
-    if (token) { $("gateOk").disabled = true; enterHub().catch(() => { if (token) { $("gateErr").textContent = "불러오지 못했습니다. 새로 고치거나 다시 로그인해 주세요."; $("gateOk").disabled = false; } }); }
+    if (token) { $("gateOk").disabled = true; enterHub().catch(() => { settle(); if (token) { $("gateErr").textContent = "불러오지 못했습니다. 새로 고치거나 다시 로그인해 주세요."; $("gateOk").disabled = false; } }); }
   }
 })();
 </script>
